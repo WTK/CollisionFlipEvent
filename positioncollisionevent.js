@@ -1,3 +1,8 @@
+/*
+ * @author Marcin Wtorkowski
+ *
+ */
+
 (function($) {
     if (!$.ui || !$.ui.position) {
         throw "jQuery.ui or jQuery.ui.position doesn't exist!"
@@ -17,6 +22,16 @@
         triggerColissionDetected = function(element, prop) {
             // trigger position collision event
             $(element).trigger('positioncollision', [prop])
+        },
+        getNewHandler = function(prop, direction) {
+            return function(position, data) {
+                var originalPosition = getPositionCopy(position);
+                // call original UI position handler
+                original_ui_position[prop][direction].call(this, position, data);
+                if (positionChanged(position, originalPosition)) {
+                    triggerColissionDetected(data.elem, direction);
+                }
+            }
         };
 
     for (prop in original_ui_position) {
@@ -25,22 +40,8 @@
             typeof(prop_value) == 'object' && prop_value.hasOwnProperty('left') && prop_value.hasOwnProperty('top')
         ) {
             wrapped_ui_position[prop] = {
-                left: function(position, data) {
-                    var originalPosition = getPositionCopy(position);
-                    // call original UI position handler
-                    original_ui_position[prop].left.call(this, position, data);
-                    if (positionChanged(position, originalPosition)) {
-                        triggerColissionDetected(data.elem, 'left');
-                    }
-                },
-                top: function(position, data) {
-                    var originalPosition = getPositionCopy(position);
-                    // call original UI position handler
-                    original_ui_position[prop].top.call(this, position, data);
-                    if (positionChanged(position, originalPosition)) {
-                        triggerColissionDetected(data.elem, 'top');
-                    }
-                }
+                left: getNewHandler(prop, 'left'),
+                top: getNewHandler(prop, 'top')
             }
         }
     }
